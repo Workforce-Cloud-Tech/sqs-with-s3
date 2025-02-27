@@ -1,0 +1,25 @@
+{ 
+    "name": "recruitcrm/sqs-with-s3",
+    "description": "This package bypasses the SQS size limit by uploading payloads over 200 KB to Amazon S3, ensuring seamless message processing.",
+    "type": "library",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "SqsWithS3\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "RecruitCRM"
+        }
+    ],
+    "minimum-stability": "dev",
+    "require": {
+        "aws/aws-sdk-php": "^3.1",
+        "illuminate/container": "~9|~10|~11",
+        "illuminate/contracts": "~9|~10|~11",
+        "illuminate/filesystem": "~9|~10|~11",
+        "illuminate/queue": "~9|~10|~11",
+        "illuminate/support": "~9|~10|~11"
+    }
+}
