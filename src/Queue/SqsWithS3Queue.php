@@ -136,7 +136,7 @@ class SqsWithS3Queue extends SqsQueue
     public function clear($queue)
     {
         return tap(parent::clear($queue), function (): void {
-            if (Arr::get($this->s3Options, 'cleanup') &&  Arr::get($this->s3Options, 'prefix')) {
+            if (Arr::get($this->s3Options, 'cleanup')) {
                 $this->getConfiguredStorage()->deleteDirectory("queue-payloads");
             }
         });
