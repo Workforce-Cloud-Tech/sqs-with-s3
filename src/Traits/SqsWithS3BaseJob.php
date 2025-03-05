@@ -82,4 +82,21 @@ trait SqsWithS3BaseJob
 
         return parent::getRawBody();
     }
+
+    /**
+     * Override payload method to fetch data from S3.
+     *
+     * @return array
+     */
+    public function payload()
+    {
+        $rawPayload = json_decode(parent::getRawBody(), true);
+
+        if ($pointer = $this->getPayloadLocation()) {
+            $s3Payload = $this->getConfiguredStorage()->get($pointer);
+            return json_decode($s3Payload, true);
+        }
+
+        return $rawPayload;
+    }
 }
