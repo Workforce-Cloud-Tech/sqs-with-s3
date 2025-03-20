@@ -60,7 +60,8 @@ trait SqsWithS3BaseJob
     {
         parent::delete();
 
-        if (Arr::get($this->s3Options, 'cleanup') && $pointer = $this->getPayloadLocation()) {
+        $pointer = $this->getPayloadLocation();
+        if (Arr::get($this->s3Options, 'cleanup') && $pointer) {
             $this->getConfiguredStorage()->delete($pointer);
         }
     }
