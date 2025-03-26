@@ -1,0 +1,7 @@
+# Ignore environment and configuration files
+.env
+.env.local
+.env.*.local
+
+# Ignore build artifacts
+vendor
