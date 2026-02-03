@@ -24,8 +24,10 @@ class SqsWithS3Queue extends SqsQueue
 
     /**
      * The storage options to save large payloads.
+     *
+     * @var array
      */
-    protected array $s3Options;
+    protected $s3Options;
 
     /**
      * Create a new Amazon SQS queue instance.
@@ -43,7 +45,7 @@ class SqsWithS3Queue extends SqsQueue
         $s3Options,
         $prefix = '',
         $suffix = '',
-        $dispatchAfterCommit = false,
+        $dispatchAfterCommit = false
     ) {
         $this->s3Options = $s3Options;
 
