@@ -12,7 +12,7 @@ trait PayloadPointers
      */
     protected function getPayloadLocation(): ?string
     {
-        return json_decode($this->job['Body'])->pointer ?? null;
+        return json_decode($this->job['Body'])?->pointer ?? null;
     }
 
     /**
