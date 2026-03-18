@@ -29,13 +29,17 @@ trait SqsWithS3BaseJob
     /**
      * Holds the raw body to prevent fetching the file from
      * s3 multiple times.
+     *
+     * @var string
      */
-    protected string $cachedRawBody = '';
+    protected $cachedRawBody = '';
 
     /**
      * s3 options for the job.
+     *
+     * @var array
      */
-    protected array $s3Options;
+    protected $s3Options;
 
     /**
      * Create a new job instance.
