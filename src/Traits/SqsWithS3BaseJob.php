@@ -6,6 +6,7 @@ use Aws\Sqs\SqsClient;
 use Illuminate\Support\Arr;
 use Illuminate\Container\Container;
 use SqsWithS3\Traits\PayloadPointers;
+use Throwable;
 
 trait SqsWithS3BaseJob
 {
@@ -78,7 +79,15 @@ trait SqsWithS3BaseJob
         }
 
         if ($pointer = $this->getPayloadLocation()) {
-            return $this->cachedRawBody = $this->getConfiguredStorage()->get($pointer);
+            try {
+                $content = $this->getConfiguredStorage()->get($pointer);
+                if ($content !== null && $content !== false) {
+                    $this->cachedRawBody = $content;
+                    return $this->cachedRawBody;
+                }
+            } catch (Throwable $e) {
+                // Fall through to parent::getRawBody()
+            }
         }
 
         return parent::getRawBody();
