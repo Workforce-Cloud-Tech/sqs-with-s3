@@ -6,10 +6,12 @@ use DateInterval;
 use Aws\Sqs\SqsClient;
 use DateTimeInterface;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Str;
 use Illuminate\Queue\SqsQueue;
 use Illuminate\Contracts\Queue\Job;
 use SqsWithS3\Traits\PayloadPointers;
 use SqsWithS3\Jobs\SqsWithS3Job;
+use SqsWithS3\Contracts\FifoMessage;
 
 class SqsWithS3Queue extends SqsQueue
 {
@@ -29,16 +31,6 @@ class SqsWithS3Queue extends SqsQueue
      */
     protected $s3Options;
 
-    /**
-     * Create a new Amazon SQS queue instance.
-     *
-     * @param  string  $default
-     * @param  array  $s3Options
-     * @param  string  $prefix
-     * @param  string  $suffix
-     * @param  bool  $dispatchAfterCommit
-     * @return void
-     */
     public function __construct(
         SqsClient $sqs,
         $default,
@@ -53,17 +45,55 @@ class SqsWithS3Queue extends SqsQueue
     }
 
     /**
+     * Push a new job onto the queue.
+     *
+     * Overridden so that jobs implementing {@see FifoMessage} can attach
+     * MessageGroupId / MessageDeduplicationId to the SQS send call.
+     */
+    public function push($job, $data = '', $queue = null)
+    {
+        return $this->enqueueUsing(
+            $job,
+            $this->createPayload($job, $queue ?: $this->default, $data),
+            $queue,
+            null,
+            function ($payload, $queue) use ($job) {
+                return $this->pushRaw($payload, $queue, $this->fifoOptions($job));
+            }
+        );
+    }
+
+    /**
+     * Push a new job onto the queue after a delay.
+     */
+    public function later($delay, $job, $data = '', $queue = null)
+    {
+        return $this->enqueueUsing(
+            $job,
+            $this->createPayload($job, $queue ?: $this->default, $data),
+            $queue,
+            $delay,
+            function ($payload, $queue) use ($job, $delay) {
+                return $this->pushRaw($payload, $queue, $this->fifoOptions($job), $delay);
+            }
+        );
+    }
+
+    /**
      * Push a raw payload onto the queue.
      *
      * @param  string  $payload
      * @param  string|null  $queue
+     * @param  array  $options   Supports MessageGroupId and MessageDeduplicationId for FIFO queues.
      * @param  mixed  $delay
      * @return mixed
      */
     public function pushRaw($payload, $queue = null, array $options = [], $delay = 0)
     {
+        $queueUrl = $this->getQueue($queue);
+
         $message = [
-            'QueueUrl' => $this->getQueue($queue),
+            'QueueUrl' => $queueUrl,
             'MessageBody' => $payload,
         ];
 
@@ -75,6 +105,21 @@ class SqsWithS3Queue extends SqsQueue
             $message['MessageBody'] = json_encode(['pointer' => $filepath]);
         }
 
+        // FIFO queues require MessageGroupId. When a job implements FifoMessage the caller
+        // will pass the ids through $options. If the queue is FIFO but no group id was
+        // supplied, fall back to a safe default so the send does not fail.
+        if ($this->isFifoQueue($queueUrl)) {
+            $message['MessageGroupId'] = $options['MessageGroupId']
+                ?? Arr::get($this->s3Options, 'default_message_group_id', 'default');
+
+            if (!empty($options['MessageDeduplicationId'])) {
+                $message['MessageDeduplicationId'] = $options['MessageDeduplicationId'];
+            }
+
+            // FIFO queues do not support per-message DelaySeconds.
+            $delay = 0;
+        }
+
         if ($delay) {
             $message['DelaySeconds'] = $this->secondsUntil($delay);
         }
@@ -83,32 +128,7 @@ class SqsWithS3Queue extends SqsQueue
     }
 
     /**
-     * Push a new job onto the queue after a delay.
-     *
-     * @param  DateTimeInterface|DateInterval|int  $delay
-     * @param  string  $job
-     * @param  mixed  $data
-     * @param  string|null  $queue
-     * @return mixed
-     */
-    public function later($delay, $job, $data = '', $queue = null)
-    {
-        return $this->enqueueUsing(
-            $job,
-            $this->createPayload($job, $queue ?: $this->default, $data),
-            $queue,
-            $delay,
-            function ($payload, $queue) use ($delay) {
-                return $this->pushRaw($payload, $queue, [], $delay);
-            }
-        );
-    }
-
-    /**
      * Pop the next job off of the queue.
-     *
-     * @param  string|null  $queue
-     * @return Job|null
      */
     public function pop($queue = null)
     {
@@ -131,9 +151,6 @@ class SqsWithS3Queue extends SqsQueue
 
     /**
      * Delete all the jobs from the queue.
-     *
-     * @param  string  $queue
-     * @return int
      */
     public function clear($queue)
     {
@@ -142,5 +159,28 @@ class SqsWithS3Queue extends SqsQueue
                 $this->getConfiguredStorage()->deleteDirectory("queue-payloads");
             }
         });
+    }
+
+    /**
+     * Extract FIFO options from a dispatched job, when the job implements FifoMessage.
+     */
+    protected function fifoOptions($job): array
+    {
+        if (!is_object($job) || !($job instanceof FifoMessage)) {
+            return [];
+        }
+
+        return [
+            'MessageGroupId' => $job->getMessageGroupId(),
+            'MessageDeduplicationId' => $job->getMessageDeduplicationId(),
+        ];
+    }
+
+    /**
+     * FIFO queue URLs always end with `.fifo`.
+     */
+    protected function isFifoQueue(string $queueUrl): bool
+    {
+        return Str::endsWith($queueUrl, '.fifo');
     }
 }
