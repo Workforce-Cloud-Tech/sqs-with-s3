@@ -49,33 +49,31 @@ class SqsWithS3Queue extends SqsQueue
      *
      * Overridden so that jobs implementing {@see FifoMessage} can attach
      * MessageGroupId / MessageDeduplicationId to the SQS send call.
+     *
+     * Matches Laravel 7's SqsQueue::push() signature exactly — do not use
+     * enqueueUsing() here (that helper was introduced in Laravel 8).
      */
     public function push($job, $data = '', $queue = null)
     {
-        return $this->enqueueUsing(
-            $job,
+        return $this->pushRaw(
             $this->createPayload($job, $queue ?: $this->default, $data),
             $queue,
-            null,
-            function ($payload, $queue) use ($job) {
-                return $this->pushRaw($payload, $queue, $this->fifoOptions($job));
-            }
+            $this->fifoOptions($job)
         );
     }
 
     /**
      * Push a new job onto the queue after a delay.
+     *
+     * Matches Laravel 7's SqsQueue::later() signature exactly.
      */
     public function later($delay, $job, $data = '', $queue = null)
     {
-        return $this->enqueueUsing(
-            $job,
+        return $this->pushRaw(
             $this->createPayload($job, $queue ?: $this->default, $data),
             $queue,
-            $delay,
-            function ($payload, $queue) use ($job, $delay) {
-                return $this->pushRaw($payload, $queue, $this->fifoOptions($job), $delay);
-            }
+            $this->fifoOptions($job),
+            $delay
         );
     }
 
