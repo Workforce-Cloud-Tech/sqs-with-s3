@@ -58,6 +58,19 @@ trait SqsWithS3BaseJob
     }
 
     /**
+     * Release the job back onto the queue.
+     *
+     * Casts $delay to int before delegating to SqsJob::release(), which passes
+     * the value directly to changeMessageVisibility as VisibilityTimeout. The
+     * AWS SDK requires an integer; the Laravel worker passes $options->delay as
+     * a string (e.g. '0') causing an ErrorException without this cast.
+     */
+    public function release($delay = 0): void
+    {
+        parent::release((int) $delay);
+    }
+
+    /**
      * Delete the job from the queue.
      */
     public function delete(): void
