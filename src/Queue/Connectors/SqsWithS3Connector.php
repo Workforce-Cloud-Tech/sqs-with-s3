@@ -33,6 +33,7 @@ class SqsWithS3Connector extends SqsConnector implements ConnectorInterface
             $config['prefix'] ?? '',
             $config['suffix'] ?? '',
             $config['after_commit'] ?? null,
+            (int) ($config['visibility_timeout'] ?? 0),
         );
     }
 }

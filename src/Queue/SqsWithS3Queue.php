@@ -31,15 +31,23 @@ class SqsWithS3Queue extends SqsQueue
      */
     protected $s3Options;
 
+    /**
+     * Per-receive VisibilityTimeout override (seconds).
+     * 0 means "use the queue's default."
+     */
+    protected int $visibilityTimeout = 0;
+
     public function __construct(
         SqsClient $sqs,
         $default,
         $s3Options,
         $prefix = '',
         $suffix = '',
-        $dispatchAfterCommit = false
+        $dispatchAfterCommit = false,
+        int $visibilityTimeout = 0
     ) {
         $this->s3Options = $s3Options;
+        $this->visibilityTimeout = $visibilityTimeout;
 
         parent::__construct($sqs, $default, $prefix, $suffix, $dispatchAfterCommit);
     }
@@ -130,10 +138,16 @@ class SqsWithS3Queue extends SqsQueue
      */
     public function pop($queue = null)
     {
-        $response = $this->sqs->receiveMessage([
-            'QueueUrl' => $queue = $this->getQueue($queue),
+        $params = [
+            'QueueUrl'       => $queue = $this->getQueue($queue),
             'AttributeNames' => ['ApproximateReceiveCount'],
-        ]);
+        ];
+
+        if ($this->visibilityTimeout > 0) {
+            $params['VisibilityTimeout'] = $this->visibilityTimeout;
+        }
+
+        $response = $this->sqs->receiveMessage($params);
 
         if (!is_null($response['Messages']) && count($response['Messages']) > 0) {
             return new SqsWithS3Job(
