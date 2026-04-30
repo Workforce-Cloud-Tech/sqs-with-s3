@@ -34,8 +34,13 @@ class SqsWithS3Queue extends SqsQueue
     /**
      * Per-receive VisibilityTimeout override (seconds).
      * 0 means "use the queue's default."
+     *
+     * Typed-property syntax (`protected int $foo`) is PHP 7.4+, this branch
+     * targets PHP 7.3 — keep this as a plain property with a phpdoc type.
+     *
+     * @var int
      */
-    protected int $visibilityTimeout = 0;
+    protected $visibilityTimeout = 0;
 
     public function __construct(
         SqsClient $sqs,
