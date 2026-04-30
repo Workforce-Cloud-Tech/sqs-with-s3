@@ -29,13 +29,17 @@ trait SqsWithS3BaseJob
     /**
      * Holds the raw body to prevent fetching the file from
      * s3 multiple times.
+     *
+     * @var string
      */
-    protected string $cachedRawBody = '';
+    protected $cachedRawBody = '';
 
     /**
      * s3 options for the job.
+     *
+     * @var array
      */
-    protected array $s3Options;
+    protected $s3Options;
 
     /**
      * Create a new job instance.
@@ -52,6 +56,19 @@ trait SqsWithS3BaseJob
         $this->container = $container;
         $this->connectionName = $connectionName;
         $this->s3Options = $s3Options;
+    }
+
+    /**
+     * Release the job back onto the queue.
+     *
+     * Casts $delay to int before delegating to SqsJob::release(), which passes
+     * the value directly to changeMessageVisibility as VisibilityTimeout. The
+     * AWS SDK requires an integer; the Laravel worker passes $options->delay as
+     * a string (e.g. '0') causing an ErrorException without this cast.
+     */
+    public function release($delay = 0): void
+    {
+        parent::release((int) $delay);
     }
 
     /**

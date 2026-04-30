@@ -13,6 +13,8 @@ class SqsWithS3ServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $manager = $this->app->make('queue');
-        $manager->addConnector('sqs-with-s3', fn () => new SqsWithS3Connector());
+        $manager->addConnector('sqs-with-s3', function () {
+            return new SqsWithS3Connector();
+        });
     }
 }
