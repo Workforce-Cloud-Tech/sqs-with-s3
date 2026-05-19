@@ -32,7 +32,8 @@ Add below configurations in queue.php :
         'always_store' => false,
         'cleanup' => true,
         'disk' => 's3',
-        'prefix' => env('SQS_QUEUE', 'your-queue-name')
+        'prefix' => env('SQS_QUEUE', 'your-queue-name'),
+        'mr_enabled' => false
     ],
 ],
 ```
