@@ -67,7 +67,12 @@ class SqsWithS3Queue extends SqsQueue
 
         if (strlen($payload) >= self::MAX_SQS_LENGTH || Arr::get($this->s3Options, 'always_store')) {
             $uuid = json_decode($payload)->uuid;
+            $enabledMR = Arr::get($this->s3Options, 'mr_enabled');
+
             $filepath = "queue-payloads/" . "{$uuid}.json";
+            if($enabledMR === true) {
+                $filepath =  env('SQS_MR_REGION') . "-queue-payloads/" . "{$uuid}.json";
+            }
             $this->getConfiguredStorage()->put($filepath, $payload);
 
             $message['MessageBody'] = json_encode(['pointer' => $filepath]);
